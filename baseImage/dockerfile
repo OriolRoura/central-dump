@@ -1,0 +1,8 @@
+FROM nginx:latest
+
+# Ensure all dependencies are installed for apt-get to work properly
+RUN apt-get update && apt-get install -y \
+    net-tools \
+    openssh-client \
+    tcpdump \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*

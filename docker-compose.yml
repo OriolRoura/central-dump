@@ -1,0 +1,114 @@
+services:
+  control:
+    image: oriolrourajimenez/project-central-dump-control:latest
+    container_name: control
+    hostname: control
+    networks:
+      - scan_network # Attach to scan_network for communication with scan services
+    ports:
+      - "3000:3000" # Map control service port
+    environment:
+      - CONTROL_ENV=production
+    volumes:
+      - scan_shared_data:/data
+
+  scan1:
+    image: oriolrourajimenez/project-central-dump-monitoring:latest
+    container_name: scan1
+    network_mode: "container:wwwnginx1" # Use the network stack of wwwnginx1
+    environment:
+      - SCAN_ENV=production
+      - TCPDUMP_PORT=80 # Set TCPDUMP_PORT to 80
+    depends_on:
+      - control
+      - wwwnginx1
+    volumes:
+      - scan_shared_data:/data
+
+  scan2:
+    image: oriolrourajimenez/project-central-dump-monitoring:latest
+    container_name: scan2
+    network_mode: "container:wwwnginx2" # Use the network stack of wwwnginx2
+    environment:
+      - SCAN_ENV=production
+      - TCPDUMP_PORT=80 # Set TCPDUMP_PORT to 80
+    depends_on:
+      - control
+      - wwwnginx2
+    volumes:
+      - scan_shared_data:/data
+
+  scan3:
+    image: oriolrourajimenez/project-central-dump-monitoring:latest
+    container_name: scan3
+    network_mode: "container:wwwnginx3" # Use the network stack of wwwnginx3
+    environment:
+      - SCAN_ENV=production
+      - TCPDUMP_PORT=80 # Set TCPDUMP_PORT to 80
+    depends_on:
+      - control
+      - wwwnginx3
+    volumes:
+      - scan_shared_data:/data
+
+  scan4:
+    image: oriolrourajimenez/project-central-dump-monitoring:latest
+    container_name: scan4
+    network_mode: "container:wwwnginx4" # Use the network stack of wwwnginx4
+    environment:
+      - SCAN_ENV=production
+      - TCPDUMP_PORT=80 # Set TCPDUMP_PORT to 80
+    depends_on:
+      - control
+      - wwwnginx4
+    volumes:
+      - scan_shared_data:/data
+
+  wwwnginx1:
+    image: oriolrourajimenez/project-central-dump-baseimage:latest
+    container_name: wwwnginx1
+    hostname: wwwnginx1
+    networks:
+      - scan_network
+    ports:
+      - "8081:80" # Map nginx default port for wwwnginx1
+
+  wwwnginx2:
+    image: oriolrourajimenez/project-central-dump-baseimage:latest
+    container_name: wwwnginx2
+    hostname: wwwnginx2
+    networks:
+      - scan_network
+    ports:
+      - "8082:80" # Map nginx default port for wwwnginx2
+
+  wwwnginx3:
+    image: oriolrooriolrourajimenez/project-central-dump-baseimage:latesturajimenez
+    container_name: wwwnginx3
+    hostname: wwwnginx3
+    networks:
+      - scan_network
+    ports:
+      - "8083:80" # Map nginx default port for wwwnginx3
+
+  wwwnginx4:
+    image: oriolrooriolrourajimenez/project-central-dump-baseimage:latesturajimenez
+    container_name: wwwnginx4
+    hostname: wwwnginx4
+    networks:
+      - scan_network
+    ports:
+      - "8084:80" # Map nginx default port for wwwnginx4
+
+networks:
+  scan_network:
+    driver: bridge # Attach to scan_network for communication between scan services
+
+volumes:
+  scan_shared_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: .\data
+

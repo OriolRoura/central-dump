@@ -1,0 +1,28 @@
+# Use an official Node.js image as the base image
+FROM node
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Install tshark and mergecap
+RUN apt-get update && apt-get install -y \
+    tshark \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the rest of the application code
+COPY . .
+
+# Create a /data directory
+RUN mkdir -p /data
+
+# Expose the application port
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]

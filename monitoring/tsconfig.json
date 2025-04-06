@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "strict": true,
+    "types": ["@types/webrtc", "jest", "node"],
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "inlineSources": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "lib/**/*.ts",
+    "src/routes/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "nde_modules",
+    "*}/*.spec.ts"
+  ]
+}

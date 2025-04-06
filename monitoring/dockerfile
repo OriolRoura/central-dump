@@ -1,0 +1,26 @@
+# Use an official Node.js image as the base image
+FROM node
+
+# Install tcpdump
+RUN apt-get update && apt-get install -y tcpdump && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Create /data directory
+RUN mkdir -p /data
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the application port
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]
