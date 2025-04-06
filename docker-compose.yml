@@ -83,7 +83,7 @@ services:
       - "8082:80" # Map nginx default port for wwwnginx2
 
   wwwnginx3:
-    image: oriolrooriolrourajimenez/project-central-dump-baseimage:latesturajimenez
+    image: oriolrourajimenez/project-central-dump-baseimage:latest
     container_name: wwwnginx3
     hostname: wwwnginx3
     networks:
@@ -92,7 +92,7 @@ services:
       - "8083:80" # Map nginx default port for wwwnginx3
 
   wwwnginx4:
-    image: oriolrooriolrourajimenez/project-central-dump-baseimage:latesturajimenez
+    image: oriolrourajimenez/project-central-dump-baseimage:latest
     container_name: wwwnginx4
     hostname: wwwnginx4
     networks:

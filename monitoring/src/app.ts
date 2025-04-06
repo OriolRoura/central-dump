@@ -90,10 +90,6 @@ app.get('/stop', (req: Request, res: Response): void => {
     }
 
     try {
-        // Send the SIGUSR1 signal to flush tcpdump's buffers
-        if (tcpdumpProcess.pid) {
-            process.kill(tcpdumpProcess.pid, 'SIGUSR1');
-        }
 
         // Properly terminate the tcpdump process
         tcpdumpProcess.kill('SIGINT');
