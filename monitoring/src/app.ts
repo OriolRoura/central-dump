@@ -78,7 +78,7 @@ app.get('/start', (req: Request, res: Response): void => {
         if (tcpdumpProcess){console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess.pid}`);
         res.send('tcpdump started. With pid: ' + tcpdumpProcess.pid);
         }else{
-            res.send('tcpdump started? ' + tcpdumpProcess);
+            res.send('tcpdump started? ');
 
         }
         
