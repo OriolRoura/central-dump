@@ -71,7 +71,7 @@ app.get('/start', (req: Request, res: Response): void => {
             if (stderr) {
                 console.error(`Stderr: ${stderr}`);
             }
-            console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture.`);
+            console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess}`);
             console.log(`Stdout: ${stdout}`);
         });
 
@@ -84,6 +84,7 @@ app.get('/start', (req: Request, res: Response): void => {
 
 // Endpoint to stop tcpdump
 app.get('/stop', (req: Request, res: Response): void => {
+    res.send(`stopping process ${tcpdumpProcess}.`);
     if (!tcpdumpProcess) {
         res.status(400).send('tcpdump is not running.');
         return;
