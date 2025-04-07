@@ -18,7 +18,7 @@
  */
 
 import express, { Request, Response } from 'express';
-import { exec, ChildProcess } from 'child_process';
+import { exec, spawn, ChildProcess } from 'child_process';
 import axios from 'axios'; // Add axios for HTTP requests
 
 var containerName = '';
@@ -58,30 +58,31 @@ let tcpdumpProcess: ChildProcess | null = null;
 
 // Endpoint to start tcpdump
 app.get('/start', (req: Request, res: Response): void => {
-    
     if (tcpdumpProcess) {
         res.status(400).send('tcpdump is already running.');
         return;
     }
 
     try {
-        tcpdumpProcess = exec(`tcpdump -v -s 0 dst port ${tcpdumpPort} -w /data/dumpfile_${containerName}.pcap`, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error: ${error.message}`);
-            }
-            if (stderr) {
-                console.error(`Stderr: ${stderr}`);
-            }
-            console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture.`);
-            console.log(`Stdout: ${stdout}`);
-        });
-        if (tcpdumpProcess){console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess.pid}`);
-        res.send('tcpdump started. With pid: ' + tcpdumpProcess.pid);
-        }else{
-            res.send('tcpdump started? ' + tcpdumpProcess);
+        tcpdumpProcess = spawn('tcpdump', ['-v', '-s', '0', 'dst', 'port', tcpdumpPort, '-w', `/data/dumpfile_${containerName}.pcap`]);
 
-        }
+        if (tcpdumpProcess) {
+            tcpdumpProcess.stdout?.on('data', (data) => {
+                console.log(`tcpdump stdout: ${data}`);
+            });
         
+            tcpdumpProcess.stderr?.on('data', (data) => {
+                console.error(`tcpdump stderr: ${data}`);
+            });
+        
+            tcpdumpProcess.on('close', (code) => {
+                console.log(`tcpdump process exited with code ${code}`);
+                tcpdumpProcess = null; // Reset the process reference
+            });
+        }
+
+        console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess.pid}`);
+        res.send(`tcpdump started. With pid: ${tcpdumpProcess.pid}`);
     } catch (err) {
         console.error(err);
         res.status(500).send('Failed to start tcpdump.');
@@ -93,20 +94,19 @@ app.get('/stop', (req: Request, res: Response): void => {
     if (!tcpdumpProcess) {
         res.status(400).send('tcpdump is not running.');
         return;
-    }else{
+    }
+    else {
         try {
+            console.log(`Stopping tcpdump process. PID: ${tcpdumpProcess?.pid}`);
+            res.send(`Stopping process with PID: ${tcpdumpProcess?.pid}.`);
+            tcpdumpProcess.kill('SIGINT'); // Send SIGINT to the tcpdump process
+            tcpdumpProcess = null; // Reset the process reference
 
-            console.log(`tcpdump process stopped. PID: ${tcpdumpProcess.pid}`);
-            res.send(`Stopping process with PID: ${tcpdumpProcess.pid}.`);
-            // Properly terminate the tcpdump process
-            tcpdumpProcess.kill('SIGINT');
-            tcpdumpProcess = null;
         } catch (err) {
             console.error(err);
             res.status(500).send('Failed to stop tcpdump.');
         }
     }
-    
 });
 
 // Start the server
