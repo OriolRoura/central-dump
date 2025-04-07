@@ -58,6 +58,7 @@ let tcpdumpProcess: ChildProcess | null = null;
 
 // Endpoint to start tcpdump
 app.get('/start', (req: Request, res: Response): void => {
+    
     if (tcpdumpProcess) {
         res.status(400).send('tcpdump is already running.');
         return;
@@ -71,11 +72,11 @@ app.get('/start', (req: Request, res: Response): void => {
             if (stderr) {
                 console.error(`Stderr: ${stderr}`);
             }
-            console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess}`);
+            console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess.pid}`);
             console.log(`Stdout: ${stdout}`);
         });
-
-        res.send('tcpdump started.');
+        console.log(`tcpdump started on port ${tcpdumpPort} with full packet capture. Process id ${tcpdumpProcess.pid}`);
+        res.send('tcpdump started. With pid: ' + tcpdumpProcess.pid);
     } catch (err) {
         console.error(err);
         res.status(500).send('Failed to start tcpdump.');
@@ -84,7 +85,6 @@ app.get('/start', (req: Request, res: Response): void => {
 
 // Endpoint to stop tcpdump
 app.get('/stop', (req: Request, res: Response): void => {
-    res.send(`stopping process ${tcpdumpProcess}.`);
     if (!tcpdumpProcess) {
         res.status(400).send('tcpdump is not running.');
         return;
@@ -95,8 +95,8 @@ app.get('/stop', (req: Request, res: Response): void => {
         // Properly terminate the tcpdump process
         tcpdumpProcess.kill('SIGINT');
         tcpdumpProcess = null;
-
-        res.send('tcpdump stopped.');
+        console.log(`tcpdump process stopped. PID: ${tcpdumpProcess.pid}`);
+        res.send(`Stopping process with PID: ${tcpdumpProcess.pid}.`);
     } catch (err) {
         console.error(err);
         res.status(500).send('Failed to stop tcpdump.');
