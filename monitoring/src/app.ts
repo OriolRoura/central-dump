@@ -88,19 +88,20 @@ app.get('/stop', (req: Request, res: Response): void => {
     if (!tcpdumpProcess) {
         res.status(400).send('tcpdump is not running.');
         return;
-    }
+    }else{
+        try {
 
-    try {
-
-        // Properly terminate the tcpdump process
-        tcpdumpProcess.kill('SIGINT');
-        tcpdumpProcess = null;
-        console.log(`tcpdump process stopped. PID: ${tcpdumpProcess.pid}`);
-        res.send(`Stopping process with PID: ${tcpdumpProcess.pid}.`);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Failed to stop tcpdump.');
+            // Properly terminate the tcpdump process
+            tcpdumpProcess.kill('SIGINT');
+            tcpdumpProcess = null;
+            console.log(`tcpdump process stopped. PID: ${tcpdumpProcess.pid}`);
+            res.send(`Stopping process with PID: ${tcpdumpProcess.pid}.`);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send('Failed to stop tcpdump.');
+        }
     }
+    
 });
 
 // Start the server
