@@ -96,33 +96,42 @@ app.get('/stop', async (req: Request, res: Response): Promise<void> => {
   try {
     // rmmove existing merged pcap file if it exists
     await fs.rm(mergedPcapFile, { force: true });
-    // Merge all pcap files using Node.js
-    const pcapFiles = await fs.readdir(pcapDir);
-    const mergedPcapBuffer: Buffer[] = [];
+  // Get all .pcap files in the directory
+  const pcapFiles = (await fs.readdir(pcapDir))
+    .filter((file) => file.endsWith('.pcap'))
+    .map((file) => path.join(pcapDir, file));
 
-    for (const file of pcapFiles) {
-      if (file.endsWith('.pcap')) {
-        const filePath = path.join(pcapDir, file);
-        const fileBuffer = await fs.readFile(filePath);
-        mergedPcapBuffer.push(fileBuffer);
+  if (pcapFiles.length === 0) {
+    console.log('No .pcap files found to merge.');
+    res.status(400).send('No .pcap files found to merge.');
+    return;
+  }
+
+  // Merge .pcap files using mergecap
+  await new Promise((resolve, reject) => {
+    const mergecapCommand = `mergecap -w ${mergedPcapFile} ${pcapFiles.join(' ')}`;
+    exec(mergecapCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Error merging pcap files:', stderr || error.message);
+        return reject(error);
       }
-    }
-
-    // Write the merged buffer to a single file
-    await fs.writeFile(mergedPcapFile, Buffer.concat(mergedPcapBuffer));
-    console.log('Pcap files merged successfully.');
-
-    // Convert merged pcap file to JSON
-    await new Promise((resolve, reject) => {
-      exec(`tshark -r ${mergedPcapFile} -T json > ${jsonOutputFile}`, (error) => {
-        if (error) {
-          console.error('Error converting pcap to JSON:', error.message);
-          return reject(error);
-        }
-        console.log('Pcap file converted to JSON successfully.');
-        resolve(null);
-      });
+      console.log('Pcap files merged successfully using mergecap.');
+      resolve(null);
     });
+  });
+
+  // Convert merged pcap file to JSON
+  await new Promise((resolve, reject) => {
+    exec(`tshark -r ${mergedPcapFile} -T json > ${jsonOutputFile}`, (error) => {
+      if (error) {
+        console.error('Error converting pcap to JSON:', error.message);
+        return reject(error);
+      }
+      console.log('Pcap file converted to JSON successfully.');
+      resolve(null);
+    });
+  });
+
 
     // Read and send the JSON output
     const jsonData = await fs.readFile(jsonOutputFile, 'utf-8');
