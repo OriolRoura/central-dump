@@ -22,9 +22,12 @@ import axios from 'axios'; // Add this import for making HTTP requests
 import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
+import cors from 'cors'; // Import the cors package
 
 const app = express();
 app.use(express.json());
+app.use(cors()); // Enable CORS for all routes
+
 const port = 3000;
 
 const containerNames: string[] = [];

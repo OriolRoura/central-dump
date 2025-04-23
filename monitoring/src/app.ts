@@ -20,7 +20,6 @@
 import express, { Request, Response } from 'express';
 import { exec, spawn, ChildProcess } from 'child_process';
 import axios from 'axios'; // Add axios for HTTP requests
-import cors from 'cors'; // Import the cors package
 
 var containerName = '';
 // Log the current Docker container name and send it to the control server
@@ -51,7 +50,6 @@ exec('cat /etc/hostname', (error, stdout, stderr) => {
 
 const app = express();
 app.use(express.json());
-app.use(cors());
 const port = 3000;
 
 const tcpdumpPort = process.env.TCPDUMP_PORT || '80'; // Get tcpdump port from environment variable or default to 80
