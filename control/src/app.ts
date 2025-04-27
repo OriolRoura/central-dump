@@ -52,7 +52,15 @@ app.get('/start', async (req: Request, res: Response): Promise<void> => {
     res.status(400).send('No container names available to start.');
     return;
   }
-
+  const pcapDir = '/data';
+  const files = await fs.readdir(pcapDir); // Read all files in the directory
+  for (const file of files) {
+      if (file.endsWith('.pcap')) { // Check if the file is a .pcap file
+          await fs.unlink(path.join(pcapDir, file)); // Delete the file
+          console.log(`Deleted old pcap file: ${file}`);
+      }
+  }
+  
   const results = await Promise.all(
     containerNames.map(async (containerName) => {
       try {
