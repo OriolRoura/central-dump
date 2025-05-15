@@ -168,7 +168,7 @@ function buildWiresharkFilterFromConfig(config: any): string {
   if (config.tcpFlags) {
     // Example: SYN, ACK
     const flags = config.tcpFlags.split(',').map((f: string) => f.trim().toUpperCase());
-    flags.forEach(flag => {
+    flags.forEach((flag: string) => {
       filters.push(`tcp.flags.${flag.toLowerCase()} == 1`);
     });
   }
@@ -318,3 +318,4 @@ app.listen(port, () => {
 });
 
 
+export default app;
