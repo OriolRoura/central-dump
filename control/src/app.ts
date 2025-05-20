@@ -189,15 +189,6 @@ function buildWiresharkFilterFromConfig(config: any): string {
   const macFilter = multiFilter('macAddress', (mac) => `eth.addr == ${mac}`);
   if (macFilter) filters.push(`(${macFilter})`);
 
-  // Packet Type (tcp, udp, icmp, etc.) - restrict to only those types
-  if (config.packetType) {
-    const types = config.packetType.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean);
-    if (types.length > 0) {
-      // Only allow these protocols, e.g. (tcp or udp or icmp)
-      filters.push(`(${types.join(' or ')})`);
-    }
-  }
-
   return filters.join(' and ');
 }
 
