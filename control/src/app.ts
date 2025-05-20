@@ -121,63 +121,81 @@ function saveConfig(config: any) {
 
 /**
  * Converts a config object to a Wireshark display filter string.
- * Only non-empty fields are included.
+ * Supports multiple comma-separated values for each field.
  */
 function buildWiresharkFilterFromConfig(config: any): string {
   const filters: string[] = [];
 
-  if (config.ip) {
-    filters.push(`ip.addr == ${config.ip}`);
+  // Helper to handle multiple values per field
+  function multiFilter(field: string, cb: (val: string) => string): string | undefined {
+    if (!config[field]) return undefined;
+    const values = config[field].split(',').map((v: string) => v.trim()).filter(Boolean);
+    if (values.length === 0) return undefined;
+    return values.map(cb).join(' or ');
   }
-  if (config.port) {
-    filters.push(`tcp.port == ${config.port} || udp.port == ${config.port}`);
-  }
-  if (config.packetType) {
-    const types = config.packetType.split(',').map((t: string) => t.trim().toLowerCase());
-    if (types.includes('tcp')) filters.push('tcp');
-    if (types.includes('udp')) filters.push('udp');
-    // Add more types if needed
-  }
-  if (config.protocol) {
-    filters.push(config.protocol.toLowerCase());
-  }
-  if (config.sourceIp) {
-    filters.push(`ip.src == ${config.sourceIp}`);
-  }
-  if (config.destinationIp) {
-    filters.push(`ip.dst == ${config.destinationIp}`);
-  }
-  if (config.sourcePort) {
-    filters.push(`tcp.srcport == ${config.sourcePort} || udp.srcport == ${config.sourcePort}`);
-  }
-  if (config.destinationPort) {
-    filters.push(`tcp.dstport == ${config.destinationPort} || udp.dstport == ${config.destinationPort}`);
-  }
+
+  // IP address (src or dst)
+  const ipFilter = multiFilter('ip', (ip) => `ip.addr == ${ip}`);
+  if (ipFilter) filters.push(`(${ipFilter})`);
+
+  // Port (tcp or udp)
+  const portFilter = multiFilter('port', (port) => `(tcp.port == ${port} or udp.port == ${port})`);
+  if (portFilter) filters.push(`(${portFilter})`);
+
+  // Protocol (tcp, udp, icmp, etc.)
+  const protocolFilter = multiFilter('protocol', (proto) => proto.toLowerCase());
+  if (protocolFilter) filters.push(`(${protocolFilter})`);
+
+  // Source IP
+  const srcIpFilter = multiFilter('sourceIp', (ip) => `ip.src == ${ip}`);
+  if (srcIpFilter) filters.push(`(${srcIpFilter})`);
+
+  // Destination IP
+  const dstIpFilter = multiFilter('destinationIp', (ip) => `ip.dst == ${ip}`);
+  if (dstIpFilter) filters.push(`(${dstIpFilter})`);
+
+  // Source Port
+  const srcPortFilter = multiFilter('sourcePort', (port) => `(tcp.srcport == ${port} or udp.srcport == ${port})`);
+  if (srcPortFilter) filters.push(`(${srcPortFilter})`);
+
+  // Destination Port
+  const dstPortFilter = multiFilter('destinationPort', (port) => `(tcp.dstport == ${port} or udp.dstport == ${port})`);
+  if (dstPortFilter) filters.push(`(${dstPortFilter})`);
+
+  // Packet size min/max
   if (config.packetSizeMin) {
     filters.push(`frame.len >= ${config.packetSizeMin}`);
   }
   if (config.packetSizeMax) {
     filters.push(`frame.len <= ${config.packetSizeMax}`);
   }
+
+  // Time range
   if (config.timeRange) {
-    // Wireshark filter for time is not direct, but you can use frame.time >=/<= if available
     const [start, end] = config.timeRange.split('/');
     if (start) filters.push(`frame.time >= "${start}"`);
     if (end) filters.push(`frame.time <= "${end}"`);
   }
-  if (config.tcpFlags) {
-    // Example: SYN, ACK
-    const flags = config.tcpFlags.split(',').map((f: string) => f.trim().toUpperCase());
-    flags.forEach((flag: string) => {
-      filters.push(`tcp.flags.${flag.toLowerCase()} == 1`);
-    });
-  }
-  if (config.payloadContent) {
-    // Wireshark filter for payload content (simple contains)
-    filters.push(`frame contains "${config.payloadContent}"`);
-  }
-  if (config.macAddress) {
-    filters.push(`eth.addr == ${config.macAddress}`);
+
+  // TCP Flags
+  const tcpFlagsFilter = multiFilter('tcpFlags', (flag) => `tcp.flags.${flag.toLowerCase()} == 1`);
+  if (tcpFlagsFilter) filters.push(`(${tcpFlagsFilter})`);
+
+  // Payload content
+  const payloadContentFilter = multiFilter('payloadContent', (content) => `frame contains "${content}"`);
+  if (payloadContentFilter) filters.push(`(${payloadContentFilter})`);
+
+  // MAC address
+  const macFilter = multiFilter('macAddress', (mac) => `eth.addr == ${mac}`);
+  if (macFilter) filters.push(`(${macFilter})`);
+
+  // Packet Type (tcp, udp, icmp, etc.) - restrict to only those types
+  if (config.packetType) {
+    const types = config.packetType.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean);
+    if (types.length > 0) {
+      // Only allow these protocols, e.g. (tcp or udp or icmp)
+      filters.push(`(${types.join(' or ')})`);
+    }
   }
 
   return filters.join(' and ');
