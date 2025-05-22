@@ -330,7 +330,7 @@ app.post('/config', async (req: Request, res: Response): Promise<void> => {
       res.status(200).json({ message: 'Configuration saved and filtering succeeded', pcapData: filteredJsonData });
     } else if (filterStatus === 'ko') {
       logEvent('Filtering', `Output: filtered.json`, false);
-      res.status(200).json({ message: 'Configuration saved but filtering failed', error: errorMsg });
+      res.status(422).json({ message: 'Configuration saved but filtering failed', error: errorMsg });
     } else {
       res.status(200).json({ message: 'Configuration saved successfully (no merged.pcap to filter yet)' });
     }
