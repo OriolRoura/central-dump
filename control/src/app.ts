@@ -35,6 +35,22 @@ app.use(bodyParser.json());
 const port = 3000;
 const containerNames: string[] = [];
 const pcapDir = '/data';
+const logFilePath = path.join(pcapDir, 'control.log');
+
+/**
+ * Logs an event to the control log file.
+ * @param event - The event description.
+ * @param details - Additional details about the event.
+ * @param success - Whether the event was successful.
+ */
+function logEvent(event: string, details?: string, success?: boolean) {
+  const timestamp = new Date().toISOString();
+  let msg = `[${timestamp}] ${event}`;
+  if (details) msg += ` | Details: ${details}`;
+  if (success !== undefined) msg += ` | Success: ${success}`;
+  msg += '\n';
+  fsSync.appendFileSync(logFilePath, msg, 'utf-8');
+}
 
 // --- Utility Functions ---
 
@@ -57,6 +73,7 @@ async function clearOldPcaps(dir: string) {
       await fs.unlink(path.join(dir, file));
     }
   }
+  logEvent('Monitoring started', 'Cleared old pcap files', true);
 }
 
 async function mergePcaps(dir: string, mergedPcapFile: string) {
@@ -64,10 +81,14 @@ async function mergePcaps(dir: string, mergedPcapFile: string) {
   const pcapFiles = (await fs.readdir(dir))
     .filter((file:any) => file.endsWith('.pcap'))
     .map((file:any) => path.join(dir, file));
-  if (pcapFiles.length === 0) throw new Error('No .pcap files found to merge.');
+  if (pcapFiles.length === 0) {
+    logEvent('Monitoring stopped', 'No .pcap files found to merge', false);
+    throw new Error('No .pcap files found to merge.');
+  }
+  const mergecapCommand = `mergecap -w ${mergedPcapFile} ${pcapFiles.join(' ')}`;
   await new Promise((resolve, reject) => {
-    const mergecapCommand = `mergecap -w ${mergedPcapFile} ${pcapFiles.join(' ')}`;
     exec(mergecapCommand, (error:any) => {
+      logEvent('Monitoring stopped', `Command: ${mergecapCommand}`, !error);
       if (error) return reject(error);
       resolve(null);
     });
@@ -75,8 +96,10 @@ async function mergePcaps(dir: string, mergedPcapFile: string) {
 }
 
 async function pcapToJson(pcapFile: string, jsonFile: string) {
+  const tsharkCmd = `tshark -r ${pcapFile} -T json > ${jsonFile}`;
   await new Promise((resolve, reject) => {
-    exec(`tshark -r ${pcapFile} -T json > ${jsonFile}`, (error) => {
+    exec(tsharkCmd, (error) => {
+      logEvent('Filtering', `Command: ${tsharkCmd}`, !error && fsSync.existsSync(jsonFile));
       if (error) return reject(error);
       resolve(null);
     });
@@ -91,11 +114,12 @@ async function filterPcapAndJson(
   const filteredPcapFile = path.join(outputDir, 'filtered.pcap');
   const filteredJsonFile = path.join(outputDir, 'filtered.json');
   try {
+    const filterCmd = filterString
+      ? `tshark -r ${mergedPcapFile} -Y "${filterString}" -w ${filteredPcapFile}`
+      : `cp ${mergedPcapFile} ${filteredPcapFile}`;
     await new Promise((resolve, reject) => {
-      const filterCmd = filterString
-        ? `tshark -r ${mergedPcapFile} -Y "${filterString}" -w ${filteredPcapFile}`
-        : `cp ${mergedPcapFile} ${filteredPcapFile}`;
       exec(filterCmd, (error:any) => {
+        logEvent('Filtering', `Command: ${filterCmd}`, !error && fsSync.existsSync(filteredPcapFile));
         if (error) return reject(error);
         resolve(null);
       });
@@ -103,11 +127,14 @@ async function filterPcapAndJson(
     await pcapToJson(filteredPcapFile, filteredJsonFile);
     if (fsSync.existsSync(filteredJsonFile)) {
       const filteredJsonData = JSON.parse(fsSync.readFileSync(filteredJsonFile, 'utf-8'));
+      logEvent('Filtering', `Output: ${filteredJsonFile}`, true);
       return { status: 'ok', filteredJsonData };
     } else {
+      logEvent('Filtering', `Output: ${filteredJsonFile}`, false);
       return { status: 'ko', errorMsg: 'Filtered JSON file not found after filtering.' };
     }
   } catch (err: any) {
+    logEvent('Filtering', `Error: ${err?.message || String(err)}`, false);
     return { status: 'ko', errorMsg: 'Filtering failed: ' + (err?.message || String(err)) };
   }
 }
@@ -214,9 +241,12 @@ app.get('/start', async (req: Request, res: Response): Promise<void> => {
   const results = await Promise.all(
     containerNames.map(async (containerName) => {
       try {
-        await axios.get(`http://${containerName}:3000/start`);
+        const cmd = `http://${containerName}:3000/start`;
+        await axios.get(cmd);
+        logEvent('Monitoring started', `Command: ${cmd}`, true);
         return { containerName, status: 'success' };
       } catch (error) {
+        logEvent('Monitoring started', `Command: http://${containerName}:3000/start`, false);
         return { containerName, status: 'failed' };
       }
     })
@@ -232,9 +262,12 @@ app.get('/stop', async (req: Request, res: Response): Promise<void> => {
   const results = await Promise.all(
     containerNames.map(async (containerName) => {
       try {
-        await axios.get(`http://${containerName}:3000/stop`);
+        const cmd = `http://${containerName}:3000/stop`;
+        await axios.get(cmd);
+        logEvent('Monitoring stopped', `Command: ${cmd}`, true);
         return { containerName, status: 'success' };
       } catch (error) {
+        logEvent('Monitoring stopped', `Command: http://${containerName}:3000/stop`, false);
         return { containerName, status: 'failed' };
       }
     })
@@ -257,6 +290,7 @@ app.get('/stop', async (req: Request, res: Response): Promise<void> => {
       filteredJsonData = filterResult.filteredJsonData;
       errorMsg = filterResult.errorMsg;
     }
+    logEvent('Monitoring stopped', `Output: ${jsonOutputFile}`, true);
     res.json({
       message: 'Stop signal sent to all scan dockers.',
       results,
@@ -265,6 +299,7 @@ app.get('/stop', async (req: Request, res: Response): Promise<void> => {
       error: filterStatus === 'ko' ? errorMsg : undefined
     });
   } catch (error: any) {
+    logEvent('Monitoring stopped', `Error: ${error.message || 'Failed to process pcap files.'}`, false);
     res.status(500).send(error.message || 'Failed to process pcap files.');
   }
 });
@@ -291,13 +326,16 @@ app.post('/config', async (req: Request, res: Response): Promise<void> => {
       errorMsg = filterResult.errorMsg;
     }
     if (filterStatus === 'ok' && filteredJsonData) {
+      logEvent('Filtering', `Output: filtered.json`, true);
       res.status(200).json({ message: 'Configuration saved and filtering succeeded', pcapData: filteredJsonData });
     } else if (filterStatus === 'ko') {
+      logEvent('Filtering', `Output: filtered.json`, false);
       res.status(200).json({ message: 'Configuration saved but filtering failed', error: errorMsg });
     } else {
       res.status(200).json({ message: 'Configuration saved successfully (no merged.pcap to filter yet)' });
     }
-  } catch (error) {
+  } catch (error: any) {
+    logEvent('Filtering', `Error: ${error?.message || 'Failed to save configuration'}`, false);
     res.status(500).json({ message: 'Failed to save configuration' });
   }
 });
