@@ -78,7 +78,16 @@ async function clearOldPcaps(dir: string) {
   if (fsSync.existsSync(outputJsonPath)) {
     await fs.unlink(outputJsonPath);
   }
-  logEvent('Monitoring started', 'Cleared old pcap files and output.json', true);
+  // Also delete filtered.pcap and filtered.json if they exist
+  const filteredPcapPath = path.join(dir, 'filtered.pcap');
+  if (fsSync.existsSync(filteredPcapPath)) {
+    await fs.unlink(filteredPcapPath);
+  }
+  const filteredJsonPath = path.join(dir, 'filtered.json');
+  if (fsSync.existsSync(filteredJsonPath)) {
+    await fs.unlink(filteredJsonPath);
+  }
+  logEvent('Monitoring started', 'Cleared old pcap files, output.json, filtered.pcap, and filtered.json', true);
 }
 
 async function mergePcaps(dir: string, mergedPcapFile: string) {
