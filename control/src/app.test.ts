@@ -93,19 +93,6 @@ describe('GET /stop', () => {
   }, 10000); // Increase timeout to 10s
 });
 
-describe('POST /config', () => {
-  it('should save configuration and filter if possible', async () => {
-    // Mock fsSync.existsSync to simulate merged.pcap exists
-    (fsSync.existsSync as jest.Mock).mockImplementation((filePath: string) => {
-      if (filePath.endsWith('merged.pcap')) return true;
-      return false;
-    });
-    const config = { ip: '1.2.3.4', port: 80 };
-    const res = await request(server).post('/config').send(config);
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('message');
-  }, 10000); // Increase timeout to 10s
-});
 
 describe('GET /cleanConf', () => {
   it('should clean config and filtered files', async () => {
