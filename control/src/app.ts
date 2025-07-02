@@ -34,6 +34,8 @@ app.use(bodyParser.json());
 
 const port = 3000;
 const containerNames: string[] = [];
+// Add monitoring state tracking
+let isMonitoringActive = false;
 const pcapDir = '/data';
 const logFilePath = path.join(pcapDir, 'control.log');
 
@@ -252,6 +254,7 @@ app.get('/start', async (req: Request, res: Response): Promise<void> => {
     return;
   }
   await clearOldPcaps(pcapDir);
+  isMonitoringActive = true;
   const results = await Promise.all(
     containerNames.map(async (containerName) => {
       try {
@@ -287,6 +290,7 @@ app.get('/stop', async (req: Request, res: Response): Promise<void> => {
     })
   );
   await new Promise((resolve) => setTimeout(resolve, 5000));
+  isMonitoringActive = false;
   const mergedPcapFile = path.join(pcapDir, 'merged.pcap');
   const jsonOutputFile = path.join(pcapDir, 'output.json');
   try {
@@ -372,6 +376,14 @@ app.get('/cleanConf', async (req: Request, res: Response): Promise<void> => {
 
 app.get('/test', (req: Request, res: Response): void => {
   res.send('Server is running and reachable.');
+});
+
+app.get('/status', (req: Request, res: Response): void => {
+  res.json({
+    isMonitoringActive,
+    registeredContainers: containerNames.length,
+    containerNames
+  });
 });
 
 app.listen(port, () => {
